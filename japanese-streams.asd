@@ -1,9 +1,9 @@
 (in-package :cl-user)
-(defpackage japanese-streams-asd
+(defpackage cl-japanese-streams-asd
   (:use :cl :asdf))
-(in-package :japanese-streams-asd)
+(in-package :cl-japanese-streams-asd)
 
-(defsystem japanese-streams
+(defsystem cl-japanese-streams
   :version "0.1"
   :author "lambda_sakura"
   :license "MIT"
@@ -14,7 +14,7 @@
                :trivial-gray-streams)
   :components ((:module "src"
                 :components
-                ((:file "japanese-streams"))))
+                ((:file "cl-japanese-streams"))))
   :description "Japanese strings streams for Common Lisp"
   :long-description
   #.(with-open-file (stream (merge-pathnames

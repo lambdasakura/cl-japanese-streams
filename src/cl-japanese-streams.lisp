@@ -79,7 +79,7 @@
 			     buffer)))
 
 @export
-(defmacro with-open-multibyte-file ((stream filespec &rest options &key (encoding :utf-8)) &body body)
+(defmacro with-open-japanese-file ((stream filespec &rest options &key (encoding :utf-8)) &body body)
   `(with-open-stream (,stream (open ,filespec :element-type 'octet ,@options))
      (setq ,stream (make-japanese-input-stream
 		    nil 
