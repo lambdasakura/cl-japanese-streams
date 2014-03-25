@@ -9,7 +9,7 @@
   :license "MIT"
   :depends-on (:cl-annot
                :cl-syntax-annot
-	       :jp
+	       :babel
 	       :flexi-streams
                :trivial-gray-streams)
   :components ((:module "src"

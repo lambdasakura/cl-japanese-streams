@@ -1,45 +1,50 @@
 (in-package :cl-user)
 (defpackage japanese-streams
   (:use :cl
-	:jp
+	:babel
 	:trivial-gray-streams)
   (:export :japanese-stream-buffer
 	   :japanese-stream-position))
 (in-package :japanese-streams)
 (cl-syntax:use-syntax :annot)
+(deftype octets () '(unsigned-byte 8))
 
-(deftype octet () '(unsigned-byte 8))
+@export
+(defun vector->char (vec &key (encoding :utf-8))
+  (let* ((lst (loop for i across vec collect i))
+	 (array (make-array (length lst) :element-type 'octets :initial-contents lst)))
+  (ignore-errors (babel:octets-to-string array :encoding encoding))))
 
-(defun vector->char (vec &key (external-format :utf-8))
-  (ignore-errors (jp:decode vec external-format)))
-
-(defun string->usb8-stream (string &key (external-format :utf-8))
+@export
+(defun string->usb8-stream (string &key (encoding :utf-8))
   "Generate octets stream form string"
-  (let ((octets (jp:encode string external-format)))
+  (let ((octets (babel:string-to-octets string :encoding encoding)))
     (flexi-streams:make-flexi-stream 
      (flexi-streams:make-in-memory-input-stream octets))))
 
-(defun read-japanese-char (stream &key (external-format :utf-8))
-  (let ((temp (make-array 1 :element-type '(unsigned-byte 8) :adjustable t :fill-pointer 0)))
+@export
+(defun read-japanese-char (stream &key (encoding :utf-8))
+  (let ((temp (make-array 1 :element-type 'octets :adjustable t :fill-pointer 0)))
     (loop for byte = (read-byte stream nil :eof)
        do
 	 (if (eq byte :eof) (return nil))
 	 (vector-push-extend byte temp)
-	 (let ((char (vector->char temp :external-format external-format)))
+	 (let ((char (vector->char temp :encoding encoding)))
 	   (if char (return (elt char 0)))))))
 
-(defun usb8-stream->japanese-stream-buffer (usb8-stream &key (external-format :utf-8))
+(defun usb8-stream->japanese-stream-buffer (usb8-stream &key (encoding :utf-8))
   (let ((array (make-array 0
 			   :adjustable t
 			   :fill-pointer 0)))
-    (loop for char = (read-japanese-char usb8-stream :external-format external-format)
+    (loop for char = (read-japanese-char usb8-stream :encoding encoding)
 	 until (eq char nil)
 	 do
 	 (vector-push-extend char array))
     array))
 
-(defun make-japanese-stream-buffer (strings &key (external-format :utf-8))
-  (let ((jp-st (string->usb8-stream strings :external-format external-format)))
+@export
+(defun make-japanese-stream-buffer (strings &key (encoding :utf-8))
+  (let ((jp-st (string->usb8-stream strings :encoding encoding)))
     (usb8-stream->japanese-stream-buffer jp-st)))
 	
 @export
@@ -72,14 +77,14 @@
 ;; STREAM-CLEAR-INPUT  stream
 
 @export
-(defun make-japanese-input-stream (&optional (strings nil) &key (external-format :utf-8) buffer)
+(defun make-japanese-input-stream (&optional (strings nil) &key (encoding :utf-8) buffer)
   (make-instance 'japanese-input-stream 
-		 :buffer (if (null buffer) (make-japanese-stream-buffer strings :external-format external-format) 
+		 :buffer (if (null buffer) (make-japanese-stream-buffer strings :encoding encoding) 
 			     buffer)))
 
 @export
-(defmacro with-open-multibyte-file ((stream filespec &rest options &key (external-format :utf-8)) &body body)
+(defmacro with-open-multibyte-file ((stream filespec &rest options &key (encoding :utf-8)) &body body)
   `(with-open-stream (,stream (open ,filespec :element-type 'octet ,@options))
-     (setq ,stream (make-japanese-input-stream nil :buffer (usb8-stream->japanese-stream-buffer ,stream :external-format ,external-format)
-				 :external-format ,external-format))
+     (setq ,stream (make-japanese-input-stream nil :buffer (usb8-stream->japanese-stream-buffer ,stream :encoding ,encoding)
+				 :encoding ,encoding))
      ,@body))
