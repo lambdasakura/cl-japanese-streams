@@ -1,11 +1,11 @@
 (in-package :cl-user)
-(defpackage japanese-streams
+(defpackage cl-japanese-streams
   (:use :cl
 	:babel
 	:trivial-gray-streams)
   (:export :japanese-stream-buffer
 	   :japanese-stream-position))
-(in-package :japanese-streams)
+(in-package :cl-japanese-streams)
 (cl-syntax:use-syntax :annot)
 
 (deftype octets () '(unsigned-byte 8))
@@ -35,21 +35,6 @@
 	 (let ((char (vector->char temp :encoding encoding)))
 	   (if char (return (elt char 0)))))))
 
-(defun usb8-stream->japanese-stream-buffer (usb8-stream &key (encoding :utf-8))
-  "usb8 binary stream to japanese character stream"
-  (let ((array (make-array 0 :adjustable t :fill-pointer 0)))
-    (loop for char = (read-japanese-char usb8-stream :encoding encoding)
-       until (eq char nil)
-       do
-	 (vector-push-extend char array))
-    array))
-
-@export
-(defun make-japanese-stream-buffer (strings &key (encoding :utf-8))
-  "create Japanese character stream from Japanese string"
-  (let ((jp-st (string->usb8-stream strings :encoding encoding)))
-    (usb8-stream->japanese-stream-buffer jp-st)))
-
 @export
 (defclass japanese-input-stream (fundamental-character-input-stream)
   ((stream :initarg :stream
@@ -59,31 +44,43 @@
 	   :initform (make-japanese-stream-buffer)
 	   :reader japanese-stream-buffer)
    (position :initform 0
-	     :accessor japanese-stream-position)))
+	     :accessor japanese-stream-position)
+   (encoding :initform :UTF-8
+	     :initarg :encoding
+	     :accessor encoding)))
+
+@export
+(defun make-japanese-stream-buffer ()
+  "create Japanese character stream from Japanese string"
+  (make-array 0 :adjustable t :fill-pointer 0))
+
+@export
+(defun make-japanese-stream-stream (string &key (encoding :utf-8))
+  (string->usb8-stream string :encoding encoding))
 
 
 (defmethod stream-read-char ((this japanese-input-stream))
-  (with-slots (buffer position) this
-    (if (< position (length buffer))
-	(prog1 
-	    (aref buffer position)
-	  (incf position))
-	(prog1 
-	    :eof))))
+  (with-slots (stream buffer position encoding) this
+    (let ((char (read-japanese-char stream :encoding encoding)))
+      (if (eq char nil) :eof
+	  (prog2 
+	      (vector-push-extend char buffer)
+	      (aref buffer position)
+	    (incf position))))))
 
 @export
-(defun make-japanese-input-stream (&optional (strings nil) &key (encoding :utf-8) buffer)
+(defun make-japanese-input-stream (&optional (string nil) &key (encoding :utf-8) buffer)
   (make-instance 'japanese-input-stream 
-		 :buffer (if (null buffer)
-			     (make-japanese-stream-buffer strings :encoding encoding) 
-			     buffer)))
+		 :encoding encoding
+		 :stream (make-japanese-stream-stream string :encoding encoding)
+		 :buffer (make-japanese-stream-buffer)))
 
 @export
 (defmacro with-open-japanese-file ((stream filespec &rest options &key (encoding :utf-8)) &body body)
   `(with-open-stream (,stream (open ,filespec :element-type 'octet ,@options))
      (setq ,stream (make-japanese-input-stream
 		    nil 
-		    :buffer (usb8-stream->japanese-stream-buffer
-			     ,stream :encoding ,encoding)
+		    :buffer (make-japanese-stream-buffer)
+		    :stream ,stream
 		    :encoding ,encoding))
      ,@body))
