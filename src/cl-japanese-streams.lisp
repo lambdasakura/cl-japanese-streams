@@ -69,18 +69,17 @@
 	    (incf position))))))
 
 @export
-(defun make-japanese-input-stream (&optional (string nil) &key (encoding :utf-8) buffer)
+(defun make-japanese-input-stream (&optional (string nil) &key (encoding :utf-8) stream)
   (make-instance 'japanese-input-stream 
 		 :encoding encoding
-		 :stream (make-japanese-stream-stream string :encoding encoding)
+		 :stream (if stream stream (make-japanese-stream-stream string :encoding encoding))
 		 :buffer (make-japanese-stream-buffer)))
 
 @export
-(defmacro with-open-japanese-file ((stream filespec &rest options &key (encoding :utf-8)) &body body)
-  `(with-open-stream (,stream (open ,filespec :element-type 'octet ,@options))
-     (setq ,stream (make-japanese-input-stream
+(defmacro with-open-japanese-file ((stream filespec &key (encoding :utf-8)) &body body)
+  `(with-open-stream (,stream (open ,filespec :element-type 'octets ))
+     (let ((,stream (make-japanese-input-stream
 		    nil 
-		    :buffer (make-japanese-stream-buffer)
 		    :stream ,stream
-		    :encoding ,encoding))
-     ,@body))
+		    :encoding ,encoding)))
+     ,@body)))
