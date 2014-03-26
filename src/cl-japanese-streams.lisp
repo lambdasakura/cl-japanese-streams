@@ -76,8 +76,9 @@
 		 :buffer (make-japanese-stream-buffer)))
 
 @export
-(defmacro with-open-japanese-file ((stream filespec &key (encoding :utf-8)) &body body)
-  `(with-open-stream (,stream (open ,filespec :element-type 'octets ))
+(defmacro with-open-japanese-file ((stream filespec &rest options &key (encoding :utf-8)) &body body)
+  (remf options :encoding)
+  `(with-open-stream (,stream (open ,filespec :element-type 'octets ,@options))
      (let ((,stream (make-japanese-input-stream
 		    nil 
 		    :stream ,stream
