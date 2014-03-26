@@ -28,4 +28,4 @@
                                :fill-pointer t)))
           (setf (fill-pointer seq) (read-sequence seq stream))
           seq)))
-  :in-order-to ((test-op (load-op circular-streams-test))))
+  :in-order-to ((test-op (load-op japanese-streams-test))))
